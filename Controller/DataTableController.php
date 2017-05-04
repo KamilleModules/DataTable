@@ -97,7 +97,6 @@ class DataTableController extends ApplicationController
                             if (file_exists($path)) {
                                 $rows = [];
                                 include $path;
-                                $generator = ArrayRowsGenerator::create()->setArray($rows);
                             } else {
                                 $this->log("DataTableController: Path to array rowsGenerator File not found: $path");
                                 $rows = [];
@@ -111,6 +110,8 @@ class DataTableController extends ApplicationController
                         } else {
                             return $this->log("Unknown array method, either the path key or the object key were expected");
                         }
+                        $generator = ArrayRowsGenerator::create()->setArray($rows);
+
                     } elseif ('quickPdo' === $type) {
                         $generator = QuickPdoRowsGenerator::create()
                             ->setFields($rowsGenerator['fields'])->setQuery($rowsGenerator['query']);
