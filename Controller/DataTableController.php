@@ -4,16 +4,19 @@
 namespace Controller\DataTable;
 
 
-use function array_key_exists;
 use Core\Controller\ApplicationController;
+use Core\Services\Hooks;
 use Core\Services\X;
 use Kamille\Architecture\Response\Web\JsonResponse;
 use Kamille\Services\XLog;
 use ModelRenderers\DataTable\DataTableRenderer;
+use ModelRenderers\Renderer\ModelAwareRendererInterface;
 use Models\DataTable\DataTableModel;
 use Module\DataTable\DataTableProfileFinder\DataTableProfileFinderInterface;
 use RowsGenerator\ArrayRowsGenerator;
+use RowsGenerator\QuickPdoRowsGenerator;
 use RowsGenerator\RowsGeneratorInterface;
+use RowsGenerator\Util\RowsTransformerUtil;
 
 class DataTableController extends ApplicationController
 {
@@ -67,6 +70,20 @@ class DataTableController extends ApplicationController
                     $page = (array_key_exists('page', $_POST)) ? $_POST['page'] : $page;
                     $nipp = (array_key_exists('nipp', $_POST)) ? $_POST['nipp'] : $nipp;
 
+                    $sortValues = array_filter($sortValues, function ($v) {
+                        if ("none" === $v) {
+                            return false;
+                        }
+                        return true;
+                    });
+
+                    $searchValues = array_filter($searchValues, function ($v) {
+                        if ("" === $v) {
+                            return false;
+                        }
+                        return true;
+                    });
+
 
                     //--------------------------------------------
                     // CREATING ROWS GENERATOR
@@ -74,17 +91,32 @@ class DataTableController extends ApplicationController
                     $rowsGenerator = $profile['rowsGenerator'];
                     $type = $rowsGenerator['type'];
                     if ('array' === $type) {
-                        $path = $rowsGenerator['path'];
-                        if (file_exists($path)) {
-                            $rows = [];
-                            include $path;
-                            $generator = ArrayRowsGenerator::create()->setArray($rows);
+                        if (array_key_exists('path', $rowsGenerator)) {
+
+                            $path = $rowsGenerator['path'];
+                            if (file_exists($path)) {
+                                $rows = [];
+                                include $path;
+                                $generator = ArrayRowsGenerator::create()->setArray($rows);
+                            } else {
+                                $this->log("DataTableController: Path to array rowsGenerator File not found: $path");
+                                $rows = [];
+                            }
+                        } elseif (array_key_exists('object', $rowsGenerator)) {
+                            $o = new $rowsGenerator['object'];
+                            /**
+                             * @var $o RowsGeneratorInterface
+                             */
+                            $rows = $o->getRows();
                         } else {
-                            $this->log("DataTableController: Path to array rowsGenerator File not found: $path");
-                            $rows = [];
+                            return $this->log("Unknown array method, either the path key or the object key were expected");
                         }
+                    } elseif ('quickPdo' === $type) {
+                        $generator = QuickPdoRowsGenerator::create()
+                            ->setFields($rowsGenerator['fields'])->setQuery($rowsGenerator['query']);
+
                     } else {
-                        throw new \Exception("not implemented yet");
+                        return $this->log("Not implemented yet, generator with type $type", true);
                     }
 
 
@@ -101,9 +133,18 @@ class DataTableController extends ApplicationController
 
 
                     //--------------------------------------------
-                    // CONFIGURING THE MODEL BY USER DATA
+                    // APPLY ROW TRANSFORMERS
                     //--------------------------------------------
                     $rows = $generator->getRows();
+                    if (array_key_exists('transformers', $profile)) {
+                        $headers = array_keys($profile['model']['headers']);
+                        $rows = RowsTransformerUtil::transform($rows, $headers, $profile['transformers']);
+                    }
+
+
+                    //--------------------------------------------
+                    // CONFIGURING THE MODEL BY USER DATA
+                    //--------------------------------------------
                     $nbTotalItems = $generator->getNbTotalItems();
 
                     $model = DataTableModel::create()
@@ -130,11 +171,26 @@ class DataTableController extends ApplicationController
                     //--------------------------------------------
                     // RENDERING AND OUTPUT
                     //--------------------------------------------
-                    $html = DataTableRenderer::create()->setModel($model->getArray())->render();
-                    return JsonResponse::create([
-                        'type' => 'success',
-                        'data' => $html,
-                    ]);
+                    $renderer = 'ModelRenderers\DataTable\DataTableRenderer';
+                    if (array_key_exists('renderer', $_POST)) {
+                        $renderer = $_POST['renderer'];
+                    }
+
+
+                    // if you need the user to override the renderer on a per-profile basis, you can uncomment such a line,
+                    // but this will probably be never needed.
+//                    $renderer = (array_key_exists('renderer', $profile)) ? $profile['renderer'] : 'ModelRenderers\DataTable\DataTableRenderer';
+
+                    $oRenderer = new $renderer();
+                    if ($oRenderer instanceof ModelAwareRendererInterface) {
+                        $html = $oRenderer->setModel($model->getArray())->render();
+                        return JsonResponse::create([
+                            'type' => 'success',
+                            'data' => $html,
+                        ]);
+                    } else {
+                        return $this->log("renderer not instance of ModelAwareRendererInterface");
+                    }
 
 
                 } else {
@@ -204,14 +260,26 @@ class DataTableController extends ApplicationController
             if (array_key_exists('showNipp', $m)) {
                 $model->setShowNipp($m['showNipp']);
             }
+            if (array_key_exists('nippItems', $m)) {
+                $model->setNippItems($m['nippItems']);
+            }
             if (array_key_exists('showQuickPage', $m)) {
                 $model->setShowQuickPage($m['showQuickPage']);
             }
             if (array_key_exists('showPagination', $m)) {
                 $model->setShowPagination($m['showPagination']);
             }
+            if (array_key_exists('paginationNavigators', $m)) {
+                $model->setPaginationNavigators($m['paginationNavigators']);
+            }
+            if (array_key_exists('paginationLength', $m)) {
+                $model->setPaginationLength($m['paginationLength']);
+            }
             if (array_key_exists('showBulkActions', $m)) {
                 $model->setShowBulkActions($m['showBulkActions']);
+            }
+            if (array_key_exists('showEmptyBulkWarning', $m)) {
+                $model->setShowEmptyBulkWarning($m['showEmptyBulkWarning']);
             }
             if (array_key_exists('bulkActions', $m)) {
                 $model->setBulkActions($m['bulkActions']);
@@ -227,6 +295,9 @@ class DataTableController extends ApplicationController
             //--------------------------------------------
             if (array_key_exists('textSearch', $m)) {
                 $model->setTextSearch($m['textSearch']);
+            }
+            if (array_key_exists('textSearchClear', $m)) {
+                $model->setTextSearchClear($m['textSearchClear']);
             }
             if (array_key_exists('textNoResult', $m)) {
                 $model->setTextNoResult($m['textNoResult']);
@@ -248,6 +319,25 @@ class DataTableController extends ApplicationController
             }
             if (array_key_exists('textBulkActionsTeaser', $m)) {
                 $model->setTextBulkActionsTeaser($m['textBulkActionsTeaser']);
+            }
+            if (array_key_exists('textEmptyBulkWarning', $m)) {
+                $model->setTextEmptyBulkWarning($m['textEmptyBulkWarning']);
+            }
+            if (array_key_exists('textUseSelectedRowsEmptyWarning', $m)) {
+                $model->setTextUseSelectedRowsEmptyWarning($m['textUseSelectedRowsEmptyWarning']);
+            }
+            if (array_key_exists('textPaginationFirst', $m)) {
+                $model->setTextPaginationFirst($m['textPaginationFirst']);
+            }
+            if (array_key_exists('textPaginationPrev', $m)) {
+                $model->setTextPaginationPrev($m['textPaginationPrev']);
+            }
+            if (array_key_exists('textPaginationNext', $m)) {
+                $model->setTextPaginationNext($m['textPaginationNext']);
+            }
+
+            if (array_key_exists('textPaginationLast', $m)) {
+                $model->setTextPaginationLast($m['textPaginationLast']);
             }
         }
     }
