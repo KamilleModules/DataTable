@@ -4,6 +4,7 @@
 namespace Controller\DataTable;
 
 
+use Bat\ObTool;
 use Core\Controller\ApplicationController;
 use Core\Services\Hooks;
 use Core\Services\X;
@@ -199,6 +200,7 @@ class DataTableController extends ApplicationController
                 }
             } catch (\Exception $e) {
                 $this->log("$e");
+                ObTool::cleanAll();
                 return JsonResponse::create([
                     'type' => 'error',
                     'data' => $e->getMessage(),
