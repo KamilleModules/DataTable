@@ -101,6 +101,10 @@ Widget Dependencies
 History Log
 ------------------
     
+- 1.4.0 -- 2017-05-06
+
+    - DataTableController now handles prc (PersistentRowCollection system) 
+    
 - 1.3.0 -- 2017-05-05
 
     - fix DataTableController returning proper error message after exception caught 
