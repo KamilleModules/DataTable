@@ -222,6 +222,17 @@
         }
 
 
+        function postToUri(uri, data) {
+
+            var form = '';
+            $.each(data, function (key, value) {
+                value = value.split('"').join('\"');
+                form += '<input type="hidden" name="' + key + '" value="' + value + '">';
+            });
+            $('<form action="' + uri + '" method="POST">' + form + '</form>').appendTo($(document.body)).submit();
+        }
+
+
         /**
          * @param type: action|bulk|special
          */
@@ -288,27 +299,30 @@
                     }
 
 
-                    $.post(data.uri, postData, function (response) {
-                        if ('post' === data.type) {
-                            window.location.reload();
-                            return;
-                        }
+                    if ('post' === data.type) {
+                        postToUri(data.uri, postData);
+                        return;
+                    }
+                    else {
 
-                        handleResponse(response, function (d) {
-                            if ('refreshOnSuccess' === data.type) {
-                                refresh(jTableHolder);
-                                return;
-                            }
-                            if ('modal' === data.type) {
-                                options.modalResponse('success', d);
-                            }
-                            if ('quietOnSuccess' === data.type) {
-                                // does nothing
-                            }
-                        });
-                    }, 'json');
+                        $.post(data.uri, postData, function (response) {
+
+                            handleResponse(response, function (d) {
+                                if ('refreshOnSuccess' === data.type) {
+                                    refresh(jTableHolder);
+                                    return;
+                                }
+                                if ('modal' === data.type) {
+                                    options.modalResponse('success', d);
+                                }
+                                if ('quietOnSuccess' === data.type) {
+                                    // does nothing
+                                }
+                            });
+                        }, 'json');
+                    }
                 }
-                else if('link' === data.type){
+                else if ('link' === data.type) {
                     window.location.href = data.uri;
                 }
             };
