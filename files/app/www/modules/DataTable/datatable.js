@@ -148,6 +148,7 @@
         }
 
         function refresh(jElem, newData) {
+
             var profileId = jElem.attr('data-id');
 
 
@@ -163,6 +164,7 @@
             else {
                 data = getStoreData(jElem);
                 data.id = profileId;
+                data.renderer = options.renderer;
             }
 
 
@@ -305,6 +307,9 @@
                             }
                         });
                     }, 'json');
+                }
+                else if('link' === data.type){
+                    window.location.href = data.uri;
                 }
             };
             if (1 === data.confirm) {

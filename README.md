@@ -101,6 +101,10 @@ Widget Dependencies
 History Log
 ------------------
     
+- 1.5.0 -- 2017-05-07
+
+    - update datatable.js 
+    
 - 1.4.0 -- 2017-05-06
 
     - DataTableController now handles prc (PersistentRowCollection system) 

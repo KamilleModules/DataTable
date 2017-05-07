@@ -130,13 +130,14 @@ class DataTableController extends ApplicationController
                         /**
                          * @var $finder PersistentRowCollectionFinderInterface
                          */
-                        if (false !== ($prc = $finder->find("NullosAdmin.Users"))) {
+                        $prcId = $rowsGenerator['id'];
+                        if (false !== ($prc = $finder->find($prcId))) {
                             /**
                              * @var $prc PersistentRowCollectionInterface
                              */
                             $rows = $prc->read($page, $nipp, $searchValues, $sortValues, $nbTotalItems);
                         } else {
-                            return $this->log("Prc not found with id NullosAdmin.Users", true);
+                            return $this->log("Prc not found with id $prcId", true);
                         }
 
                     } else {
