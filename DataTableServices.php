@@ -10,6 +10,7 @@ class DataTableServices
     protected static function DataTable_profileFinder()
     {
         $appDir = \Kamille\Ling\Z::appDir();
-        return \Module\DataTable\DataTableProfileFinder\DataTableProfileFinder::create()->setProfilesDir($appDir . "/config/datatable-profiles");
+        $f =  \Module\DataTable\DataTableProfileFinder\DataTableProfileFinder::create();
+        $f->addProfilesDir($appDir . "/config/datatable-profiles");
     }
 }

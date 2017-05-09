@@ -101,6 +101,10 @@ Widget Dependencies
 History Log
 ------------------
     
+- 1.6.0 -- 2017-05-09
+
+    - add fallbackHandlers to DataTableProfileFinder 
+    
 - 1.5.0 -- 2017-05-07
 
     - update datatable.js 
