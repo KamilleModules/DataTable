@@ -43,7 +43,7 @@ How does it work?
 The following schema explains the default synopsis for this module.
 
 
-[![datatable-module-synopsis.jpg](https://s19.postimg.org/lvqfoazfn/datatable-module-synopsis.jpg)](https://postimg.org/image/rjwqf73rz/)
+[![datatable-module-synopsis.jpg](http://lingtalfi.com/img/kamille-modules/DataTable/datatable-module-synopsis.jpg)](http://lingtalfi.com/img/kamille-modules/DataTable/datatable-module-synopsis.jpg)
 
 
 1. A page is requested
